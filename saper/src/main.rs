@@ -1,5 +1,4 @@
-// use std::fmt::Display;
-// use std::io::{self, Write};
+use rand::Rng;
 use std::{fmt::Debug, io, str::FromStr};
 
 enum GameStatus {
@@ -11,23 +10,24 @@ enum GameStatus {
 fn main() {
     let height: usize = 4;
     let width: usize = 5;
+    let mine_count: usize = 5;
 
     let mut mine_board: Vec<Vec<bool>> = create_board(height, width, false);
     let mut is_visible_board: Vec<Vec<bool>> = create_board(height, width, false);
 
-    mine_board[0][2] = true;
-    mine_board[1][2] = true;
-    mine_board[2][2] = true;
-    mine_board[3][2] = true;
+    add_mines(&mut mine_board, &mine_count);
+    // mine_board[0][2] = true;
+    // mine_board[1][2] = true;
+    // mine_board[2][2] = true;
+    // mine_board[3][2] = true;
     let value_board: Vec<Vec<u8>> = fill_values(&mine_board);
     let visible_board: Vec<Vec<bool>> = create_board(height, width, true);
-    let mut game_status: GameStatus;
 
     loop {
         display_board(&mine_board, &value_board, &is_visible_board);
         make_turn(&mut is_visible_board, &value_board, height, width);
 
-        game_status = check_game_status(&is_visible_board, &mine_board);
+        let mut game_status: GameStatus = check_game_status(&is_visible_board, &mine_board);
 
         match game_status {
             GameStatus::Continues => continue,
@@ -41,6 +41,23 @@ fn main() {
                 display_board(&mine_board, &value_board, &visible_board);
                 break;
             }
+        }
+    }
+}
+
+fn add_mines(mine_board: &mut Vec<Vec<bool>>, mine_count: &usize) {
+    let max_height = mine_board.len();
+    let max_width = mine_board[0].len();
+
+    let mut mines_left = *mine_count;
+
+    while mines_left > 0 {
+        let height = rand::thread_rng().gen_range(0..max_height);
+        let width = rand::thread_rng().gen_range(0..max_width);
+
+        if !mine_board[height][width] {
+            mine_board[height][width] = true;
+            mines_left -= 1;
         }
     }
 }
