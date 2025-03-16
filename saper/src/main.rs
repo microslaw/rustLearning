@@ -1,18 +1,117 @@
-use std::fmt::Display;
+// use std::fmt::Display;
+// use std::io::{self, Write};
+use std::{fmt::Debug, io, str::FromStr};
+
+// fn debug_print_board<T>(board: &Vec<Vec<T>>)
+// where
+//     T: Display,
+// {
+//     for row in board {
+//         for tile in row {
+//             print!(" {} ", tile)
+//         }
+//         print!("\n")
+//     }
+// }
 
 fn main() {
     let height: usize = 3;
     let width: usize = 5;
 
     let mut mine_board: Vec<Vec<bool>> = create_board(height, width, false);
-    let mut is_visible_board: Vec<Vec<bool>> = create_board(height, width, true);
+    let mut is_visible_board: Vec<Vec<bool>> = create_board(height, width, false);
 
     mine_board[0][0] = true;
     mine_board[0][1] = true;
     mine_board[0][3] = true;
-
     let value_board: Vec<Vec<u8>> = fill_values(&mine_board);
-    display_board(&mine_board, &value_board, &is_visible_board);
+
+    loop {
+        display_board(&mine_board, &value_board, &is_visible_board);
+        make_turn(&mut is_visible_board, &value_board, height, width);
+    }
+}
+
+fn make_turn(
+    is_visible_board: &mut Vec<Vec<bool>>,
+    value_board: &Vec<Vec<u8>>,
+    height: usize,
+    width: usize,
+) -> bool {
+    let mut picked_height: usize;
+    let mut picked_width: usize;
+
+    loop {
+        picked_height = get_input("What height would you like to check?");
+        picked_width = get_input("What width would you like to check?");
+
+        if does_tile_exist(picked_height as i32, picked_width as i32, height, width) {
+            if !is_visible_board[picked_height][picked_width] {
+                break;
+            }
+        }
+        println!(
+            "Tile {} {} is invalid; Please pick different tile",
+            picked_height, picked_width
+        )
+    }
+
+    floodfill_visible(value_board, is_visible_board, picked_height, picked_width);
+    return true;
+}
+
+fn floodfill_visible(
+    value_board: &Vec<Vec<u8>>,
+    is_visible_board: &mut Vec<Vec<bool>>,
+    start_height: usize,
+    start_width: usize,
+) {
+    let mut queue: Vec<(usize, usize)> = vec![(start_height, start_width)];
+
+    let max_height = is_visible_board.len();
+    let max_width = is_visible_board[0].len();
+
+    while !queue.is_empty() {
+        let tuple: Option<(usize, usize)> = queue.pop();
+        let (height, width) = match tuple {
+            Some(x) => x,
+            None => (0, 0),
+        };
+
+        println!("Now checking {} {}", height, width);
+        // if the examined tile is already revealed, continue
+        if is_visible_board[height][width] == true {
+            continue;
+        }
+
+        is_visible_board[height][width] = true;
+        // if currently examined tile is not neighbouring with a mine, add it's neighbours for examination
+        if value_board[height][width] == 0 {
+            for dh in -1..=1 {
+                for dw in -1..=1 {
+                    let bordering_height: i32 = height as i32 + dh;
+                    let bordering_width: i32 = width as i32 + dw;
+
+                    if does_tile_exist(bordering_height, bordering_width, max_height, max_width) {
+                        queue.push((bordering_height as usize, bordering_width as usize));
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn get_input<T>(message: &str) -> T
+where
+    T: Debug,
+    T: FromStr,
+    <T as FromStr>::Err: Debug,
+{
+    println!(" {} ", message);
+    let mut x = String::with_capacity(16);
+    io::stdin().read_line(&mut x).expect("Error reading input");
+    let x: T = x.trim().parse().expect("Error parsing number");
+    return x;
 }
 
 fn display_board(
@@ -88,16 +187,4 @@ where
     T: Clone,
 {
     return vec![vec![default; width]; height];
-}
-
-fn debug_print_board<T>(board: &Vec<Vec<T>>)
-where
-    T: Display,
-{
-    for row in board {
-        for tile in row {
-            print!(" {} ", tile)
-        }
-        print!("\n")
-    }
 }
