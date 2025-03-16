@@ -2,33 +2,72 @@
 // use std::io::{self, Write};
 use std::{fmt::Debug, io, str::FromStr};
 
-// fn debug_print_board<T>(board: &Vec<Vec<T>>)
-// where
-//     T: Display,
-// {
-//     for row in board {
-//         for tile in row {
-//             print!(" {} ", tile)
-//         }
-//         print!("\n")
-//     }
-// }
+enum GameStatus {
+    Won,
+    Lost,
+    Continues,
+}
 
 fn main() {
-    let height: usize = 3;
+    let height: usize = 4;
     let width: usize = 5;
 
     let mut mine_board: Vec<Vec<bool>> = create_board(height, width, false);
     let mut is_visible_board: Vec<Vec<bool>> = create_board(height, width, false);
 
-    mine_board[0][0] = true;
-    mine_board[0][1] = true;
-    mine_board[0][3] = true;
+    mine_board[0][2] = true;
+    mine_board[1][2] = true;
+    mine_board[2][2] = true;
+    mine_board[3][2] = true;
     let value_board: Vec<Vec<u8>> = fill_values(&mine_board);
+    let visible_board: Vec<Vec<bool>> = create_board(height, width, true);
+    let mut game_status: GameStatus;
 
     loop {
         display_board(&mine_board, &value_board, &is_visible_board);
         make_turn(&mut is_visible_board, &value_board, height, width);
+
+        game_status = check_game_status(&is_visible_board, &mine_board);
+
+        match game_status {
+            GameStatus::Continues => continue,
+            GameStatus::Lost => {
+                println!("Game lost");
+                display_board(&mine_board, &value_board, &visible_board);
+                break;
+            }
+            GameStatus::Won => {
+                println!("Game won");
+                display_board(&mine_board, &value_board, &visible_board);
+                break;
+            }
+        }
+    }
+}
+
+// 4 Different situations per tile are possible:
+// visible and mine => game is lost
+// visible and not mine => game continues, unless all non-mines are, then game won
+// not visible and mine => game continues, unless all mines and only mines are, then game won
+// not visible and not mine => game continues, if at least one exists
+
+fn check_game_status(is_visible_board: &Vec<Vec<bool>>, mine_board: &Vec<Vec<bool>>) -> GameStatus {
+    let mut any_left_to_discover: bool = false;
+    for (row_visible, row_mine) in is_visible_board.iter().zip(mine_board.iter()) {
+        for (is_visible, is_mine) in row_visible.iter().zip(row_mine.iter()) {
+            if *is_visible && *is_mine {
+                return GameStatus::Lost;
+            }
+            if !*is_visible && !*is_mine {
+                any_left_to_discover = true;
+            }
+        }
+    }
+
+    if !any_left_to_discover {
+        GameStatus::Won
+    } else {
+        GameStatus::Continues
     }
 }
 
@@ -37,13 +76,13 @@ fn make_turn(
     value_board: &Vec<Vec<u8>>,
     height: usize,
     width: usize,
-) -> bool {
+) {
     let mut picked_height: usize;
     let mut picked_width: usize;
 
     loop {
-        picked_height = get_input("What height would you like to check?");
-        picked_width = get_input("What width would you like to check?");
+        picked_height = get_input("What height would you like to check? \n");
+        picked_width = get_input("What width would you like to check? \n");
 
         if does_tile_exist(picked_height as i32, picked_width as i32, height, width) {
             if !is_visible_board[picked_height][picked_width] {
@@ -57,7 +96,6 @@ fn make_turn(
     }
 
     floodfill_visible(value_board, is_visible_board, picked_height, picked_width);
-    return true;
 }
 
 fn floodfill_visible(
@@ -78,7 +116,6 @@ fn floodfill_visible(
             None => (0, 0),
         };
 
-        println!("Now checking {} {}", height, width);
         // if the examined tile is already revealed, continue
         if is_visible_board[height][width] == true {
             continue;
@@ -107,7 +144,7 @@ where
     T: FromStr,
     <T as FromStr>::Err: Debug,
 {
-    println!(" {} ", message);
+    print!(" {} ", message);
     let mut x = String::with_capacity(16);
     io::stdin().read_line(&mut x).expect("Error reading input");
     let x: T = x.trim().parse().expect("Error parsing number");
