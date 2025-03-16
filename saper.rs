@@ -5,14 +5,14 @@ fn main() {
     print_board(board)
 }
 
-fn create_board(height:i8, width:i8 ){
-    return vec![vec!['#'; 80]; 24];
+fn create_board(height: i8, width: i8) {
+    return vect![vec!['#'; 80]; 24];
 }
 
 fn print_board(board: [[i8; 3]; 3]) {
-    for row in board{
-        for tile in row{
-            print(" {} ", tile)
+    for row in board {
+        for tile in row {
+            print!(" {} ", tile)
         }
         print!("\n")
     }
